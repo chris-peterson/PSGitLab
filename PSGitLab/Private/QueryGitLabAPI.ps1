@@ -53,10 +53,11 @@ Function QueryGitLabAPI {
         $ProgressPreference = 'SilentlyContinue'
         Write-Verbose "URL: $($Request.URI)"
         $webContent = Invoke-WebRequest @Request
-        $totalPages = if ($webContent.Headers.ContainsKey('X-Total-Pages')) {
-            (($webContent).Headers['X-Total-Pages']).tostring() -as [int]
-        } else { 0 }
-
+        $totalPages = 0
+        if ($webContent.Headers.ContainsKey('X-Total-Pages')) {
+            $totalPages = $($webContent.Headers['X-Total-Pages'] | Select-Object -Last 1) -as [int]
+            Write-Verbose "$($totalPages - 1) more pages to query..."
+        }
         if ($webContent.rawcontentlength -eq 0 ) { break; }
 
         $bytes = $webContent.Content.ToCharArray() | Foreach-Object{ [byte]$_ }
