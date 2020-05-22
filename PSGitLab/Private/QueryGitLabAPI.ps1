@@ -70,6 +70,7 @@ Function QueryGitLabAPI {
                 $newRequest.URI = $newRequest.URI + "?page=$($i+1)"
             }
             $Results += (Invoke-WebRequest @newRequest).Content | ConvertFrom-Json
+            Start-Sleep -Milliseconds 1000
         }
     } catch {
         $GitLabErrorText = "{0} - {1}" -f $webcontent.statuscode,$webcontent.StatusDescription
