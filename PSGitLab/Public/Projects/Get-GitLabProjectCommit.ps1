@@ -21,8 +21,10 @@
     $After,
 
     [datetime]
-    $Before
+    $Before,
 
+    [string]
+    $Sha
   )
 
   $Project = $null
@@ -58,6 +60,10 @@
     URI    = "/projects/$($Project.id)/repository/commits"
     Method = 'GET'
     Body   = $Body
+  }
+
+  if ($Sha) {
+    $Request.URI = "$($Request.URI)/$Sha"
   }
 
   QueryGitLabAPI -Request $Request -ObjectType 'GitLab.Project.Commit'
