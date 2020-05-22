@@ -29,7 +29,8 @@
   switch ($PSCmdlet.ParameterSetName) {
     'Id'
     {
-      $Project = Get-GitLabProject -Id $Id
+      # we avoid making the API call when the client provides a project ID
+      # $Project = Get-GitLabProject -Id $Id
     }
     'Namespace'
     {
@@ -55,7 +56,7 @@
   }
 
   $Request = @{
-    URI    = "/projects/$($Project.id)/repository/commits"
+    URI    = "/projects/$($Id)/repository/commits"
     Method = 'GET'
     Body   = $Body
   }
