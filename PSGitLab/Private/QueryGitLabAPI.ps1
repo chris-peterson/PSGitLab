@@ -1,3 +1,19 @@
+function Get-WebRequestResult {
+    param (
+        [Parameter(Mandatory=$true, Position=0)]
+        $Request
+    )
+
+    $Response = Invoke-WebRequest @Request
+    if ($Response.StatusCode -eq 429) {
+        Write-Host "Rate limit hit, waiting before retrying..."
+        Start-Sleep -Seconds 60
+        $Response = Invoke-WebRequest @Request
+    }
+
+    $Response
+}
+
 Function QueryGitLabAPI {
     [cmdletbinding()]
     param(
@@ -52,16 +68,15 @@ Function QueryGitLabAPI {
     try  {
         $ProgressPreference = 'SilentlyContinue'
         Write-Verbose "URL: $($Request.URI)"
-        $webContent = Invoke-WebRequest @Request
+        $webContent = Get-WebRequestResult $Request
         $totalPages = 0
-        if ($webContent.Headers.ContainsKey('X-Total-Pages')) {
+       if ($webContent.Headers.ContainsKey('X-Total-Pages')) {
             $totalPages = $($webContent.Headers['X-Total-Pages'] | Select-Object -Last 1) -as [int]
             Write-Verbose "$($totalPages - 1) more pages to query..."
         }
         if ($webContent.rawcontentlength -eq 0 ) { break; }
 
-        $bytes = $webContent.Content.ToCharArray() | Foreach-Object{ [byte]$_ }
-        $Results = [Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+        $Results = $webContent.Content | ConvertFrom-Json
         for ($i=1; $i -lt $totalPages; $i++) {
             $newRequest = $Request.PSObject.Copy()
             if ( $newRequest['URI'] -match '\?') {
@@ -70,10 +85,11 @@ Function QueryGitLabAPI {
             else {
                 $newRequest.URI = $newRequest.URI + "?page=$($i+1)"
             }
-            $Results += (Invoke-WebRequest @newRequest).Content | ConvertFrom-Json
-            Start-Sleep -Milliseconds 1000
+            $webContent = Get-WebRequestResult $newRequest
+            $Results += $webContent.Content | ConvertFrom-Json
         }
     } catch {
+        Write-Host $_.Exception.Message
         $GitLabErrorText = "{0} - {1}" -f $webcontent.statuscode,$webcontent.StatusDescription
         Write-Error -Message $GitLabErrorText
     }
